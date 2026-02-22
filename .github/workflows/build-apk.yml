@@ -1,0 +1,40 @@
+name: Build APK
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "2.10.5"
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Send Webhook Notification
+        env:
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+          PROJECT_ID: ${{ secrets.PROJECT_ID }}
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact_url }}
+        run: |
+          curl -X POST \
+          -H "Content-Type: application/json" \
+          -d '{"projectId":"'$PROJECT_ID'","apkUrl":"'$ARTIFACT_URL'"}' \
+          $WEBHOOK_URL
